@@ -1,0 +1,62 @@
+#dont touch
+version: "1.0"
+#Use this to enable protection in the lobby
+#Players won't be able to build or break stuff when enabled and in the lobby
+enable-protection: true
+#Enable the custom chat features
+#For format, use %player% for the playername and %message% for the sent message  
+Chat:
+  enable: true
+  format: "&2[&eISGChat&2] &7%player% &f&l--> &r&b%message%"
+#Enable the tablist features
+#Header and footer are what the top and bottom of the list show as
+#hidePlayersNotInGame (when enabled) will only show players in your tablist that are in the same arena as you.
+#hidePlayersInGameFromServer (when enabled) removes players in-game from everyone else's tablist
+Tablist:
+    enable: true
+    header: "&7[&6IngotSurvivalGames&7]"
+    hidePlayersNotInGame: true
+    hidePlayersInGameFromServer: true
+    footer: "&bPlaying on &aMy &lAwesome&r&a Server&b!"
+#Enable the scoreboard features
+#maxLines is the siz elimit for the scoreboard
+#Title is the name of the scoreboard
+#You can create your own lines in here. just type "Line(1-15): (text)"
+#Use %currentplayers% to get the amount of players in game, and %maxplayers% for the max amount of players
+Scoreboard:
+    enable: true
+    maxLines: 5
+    title: "&7[&6IngotSurvivalGames&7]"
+    line1: "&bPlayers InGame: &c%currentplayers% &7/ &c%maxplayers%"
+    line3: "&aMy Awesome Server!"
+#Enable the tile features
+#title sets the main title
+#subtitle sets the title
+#actionbar sets the text above the hotbar
+#fadeIn and out set how long the fades should be
+#length sets how long the title and subtitle last (doesnt affect actionbar)
+#all values are in ticks (1/20th sec)
+Title:
+    enable: true
+    title: "&aYou have joined the game"
+    subtitle: "&bHave Fun!"
+    actionbar: "Plugin by Budderman18"
+    fadeIn: 10
+    length: 100
+    fadeOut: 10
+#Specify where the lobby is when joining a game
+Lobby:
+  world: world
+  x: 100
+  y: 100
+  z: 100
+  yaw: 0.0
+  pitch: 0.0
+#Specify where the exit location is when leaving a game
+Exit:
+  world: world
+  x: -100
+  y: 100
+  z: 100
+  yaw: 0.0
+  pitch: 0.0
