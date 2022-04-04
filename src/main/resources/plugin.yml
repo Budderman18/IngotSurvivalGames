@@ -1,0 +1,32 @@
+name: IngotSurvivalGames
+main: com.budderman18.IngotSurvivalGames.main
+version: 1.0
+api-version: 1.13
+commands:
+    sg:
+        description: Access survivalgames commands
+        default: true
+        usage: /sg [command]
+    sgadmin:
+        description: Access survivalgames's admin commands
+        default: op
+        usage: /sgadmin [command]
+permissions:
+    ingotsg.sg:
+        description: Gives access to the sg command(s)
+        default: true
+    ingotsg.sg.join:
+        description: Gives access to the sg join command
+        default: true
+    ingotsg.sg.randomjoin:
+        description: Gives access to the sg randomjoin command
+        default: true
+    ingotsg.sg.leave:
+        description: Gives access to the sg leave command
+        default: true
+    ingotsg.sg.list:
+        description: Gives access to the sg list command
+        default: true
+    ingotsg.sg.help:
+        description: Gives access to the sg help command
+        default: true
