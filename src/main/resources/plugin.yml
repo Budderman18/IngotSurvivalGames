@@ -1,5 +1,5 @@
 name: IngotSurvivalGames
-main: com.budderman18.IngotSurvivalGames.main
+main: com.budderman18.IngotMinigamesAPI.Main
 version: 1.0
 api-version: 1.13
 commands:

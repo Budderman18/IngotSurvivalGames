@@ -3,17 +3,29 @@ version: "1.0"
 #Use this to enable protection in the lobby
 #Players won't be able to build or break stuff when enabled and in the lobby
 enable-protection: true
+#Use this to regenerate arenas after they've finished
+#usefull if protection in-game is disabled
+#DO NOT ENABLE THIS IF YOU HAVE VERY LARGE ARENAS!!!!(over 1,000,000 blocks inside)
+#IT WILL CAUSE LOTS OF LAG WITH HUGE ARENAS
+regenerate-arena-after-finishing: false
+#Automatically converts any block-based usage (e.g. teleportation)
+#to the center of the block. It also will change yaw & pitch to the
+#nearest 90 degrees if a rotation value is used.
+centerize-teleport-locations: true
 #Enable the custom chat features
+#sendGameMessagesToAll will output game messages to everyone on the server
 #For format, use %player% for the playername and %message% for the sent message  
 Chat:
-  enable: true
+  enable: false
+  sendGameMessagesToAll: false
   format: "&2[&eISGChat&2] &7%player% &f&l--> &r&b%message%"
 #Enable the tablist features
 #Header and footer are what the top and bottom of the list show as
 #hidePlayersNotInGame (when enabled) will only show players in your tablist that are in the same arena as you.
 #hidePlayersInGameFromServer (when enabled) removes players in-game from everyone else's tablist
+# both hide options are disabled completly and do nothing as of now
 Tablist:
-    enable: true
+    enable: false
     header: "&7[&6IngotSurvivalGames&7]"
     hidePlayersNotInGame: true
     hidePlayersInGameFromServer: true
@@ -24,7 +36,7 @@ Tablist:
 #You can create your own lines in here. just type "Line(1-15): (text)"
 #Use %currentplayers% to get the amount of players in game, and %maxplayers% for the max amount of players
 Scoreboard:
-    enable: true
+    enable: false
     maxLines: 5
     title: "&7[&6IngotSurvivalGames&7]"
     line1: "&bPlayers InGame: &c%currentplayers% &7/ &c%maxplayers%"
@@ -37,13 +49,49 @@ Scoreboard:
 #length sets how long the title and subtitle last (doesnt affect actionbar)
 #all values are in ticks (1/20th sec)
 Title:
+    enable: false
+    Join:
+        title: "&aYou have joined the game"
+        subtitle: "&bHave Fun!"
+        actionbar: "Plugin by Budderman18"
+        fadein: 10
+        length: 100
+        fadeout: 10
+    Leave:
+        title: "&aYou have left the game"
+        subtitle: "&bDon't do that!"
+        actionbar: "Plugin by Budderman18"
+        fadein: 10
+        length: 100
+        fadeout: 10
+#Enable the bossbar features
+#sizeChangesBasedOnTimeLeft will decrease the bossbar as the match goes on.
+#title sets the title
+#color sets the color
+#You can use blue, green, pink, purple, red, yellow and white
+Bossbar:
     enable: true
-    title: "&aYou have joined the game"
-    subtitle: "&bHave Fun!"
-    actionbar: "Plugin by Budderman18"
-    fadeIn: 10
-    length: 100
-    fadeOut: 10
+    sizeChangesBasedOnTimeLeft: true
+    title: "&eMy Awesome Server!"
+    color: "GREEN"
+#Create your own tables to randomize arena joining!
+#Usefull for servers with different team sizes
+#Enable chosses weather or not tables will be used
+#If disabled, it'll just randomly join all listed arenas
+#tables: <-- put tables below here
+#  Table1: <--Table followed by next number (MUST BE IN NUMERIC ORDER!!!)
+#    name: JoeMama <--name of your table(used for Tab-completion)
+#    arenas: <-- arenas to randomize
+#    - arena1
+#    - arena2
+RandomJoin:
+  enable: true
+  tables:
+    Table1:
+      name: Test
+      arenas:
+      - bdtest
+      - stress
 #Specify where the lobby is when joining a game
 Lobby:
   world: world
