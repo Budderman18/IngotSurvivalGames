@@ -25,16 +25,18 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 /**
  * 
- * This class enables and disables the plugin
- * It also imports commands and handles events
+ * This class enables and disables the plugin. 
+ * It also imports commands and handles events. 
  * 
  */
-public class Main extends JavaPlugin implements Listener { 
+public final class Main extends JavaPlugin implements Listener { 
     //retrive plugin instance
     private static Main plugin;
     //classes
     private final IngotPlayer IngotPlayer = new IngotPlayer(plugin);
     private static final Arena Arena = new Arena(plugin);
+    //version
+    private static final String VERSION = "1.0";
     //global vars
     private final String ROOT = "";
     private final ConsoleCommandSender sender = getServer().getConsoleSender();
@@ -64,16 +66,27 @@ public class Main extends JavaPlugin implements Listener {
         int[] pos2 = new int[3];
         String world = null;
         String name = null;
+        byte minPlayers = 0;
         byte maxPlayers = 0;
+        byte skipTimerAt = 0;
+        int lobbyWaitTime = 0;
+        int lobbySkipTime = 0;
+        int gameWaitTime = 0;
+        int gameLengthTime = 0;
         //Spawn
         Spawn spawn = new Spawn(plugin);
         Spawn tempspawn = null;
-        List<String> spawns = null;
         List<String> currentSpawn = null;
         String namee = null;
         double x = 0;
         double y = 0;
         double z = 0;
+        double[] lobby = new double[6];
+        String lobbyWorld = null;
+        double[] exit = new double[6];
+        String exitWorld = null;
+        double[] spec = new double[6];
+        double[] center = new double[6];
         //language
         FileConfiguration language = FileManager.getCustomData(plugin, "language", "");
         String prefixMessage = ChatColor.translateAlternateColorCodes('&', language.getString("Prefix-Message")); 
@@ -91,14 +104,43 @@ public class Main extends JavaPlugin implements Listener {
                 pos2[0] = arenaData.getInt("pos2.x");
                 pos2[1] = arenaData.getInt("pos2.y");
                 pos2[2] = arenaData.getInt("pos2.z");
+                lobbyWorld = arenaData.getString("Lobby.world");
+                lobby[0] = arenaData.getDouble("Lobby.x");
+                lobby[1] = arenaData.getDouble("Lobby.y");
+                lobby[2] = arenaData.getDouble("Lobby.z");
+                lobby[3] = arenaData.getDouble("Lobby.yaw");
+                lobby[4] = arenaData.getDouble("Lobby.pitch");
+                exitWorld = arenaData.getString("Exit.world");
+                exit[0] = arenaData.getDouble("Exit.x");
+                exit[1] = arenaData.getDouble("Exit.y");
+                exit[2] = arenaData.getDouble("Exit.z");
+                exit[3] = arenaData.getDouble("Exit.yaw");
+                exit[4] = arenaData.getDouble("Exit.pitch");
+                spec[0] = arenaData.getDouble("Spec.x");
+                spec[1] = arenaData.getDouble("Spec.y");
+                spec[2] = arenaData.getDouble("Spec.z");
+                spec[3] = arenaData.getDouble("Spec.yaw");
+                spec[4] = arenaData.getDouble("Spec.pitch");
+                center[0] = arenaData.getDouble("Center.x");
+                center[1] = arenaData.getDouble("Center.y");
+                center[2] = arenaData.getDouble("Center.z");
+                center[3] = arenaData.getDouble("Center.yaw");
+                center[4] = arenaData.getDouble("Center.pitch");
                 //get world
                 world = arenaData.getString("world");
                 //get name
                 name = arenaData.getString("name");
-                //get maxPlayers
+                //get player vars
+                minPlayers = (byte) arenaData.getInt("minPlayers");
                 maxPlayers = (byte) arenaData.getInt("maxPlayers");
+                skipTimerAt = (byte) arenaData.getInt("skip-timer-at");
+                //get timer vars
+                lobbyWaitTime = arenaData.getInt("lobby-wait-time");
+                lobbySkipTime = arenaData.getInt("lobby-start-time");
+                gameWaitTime = arenaData.getInt("game-wait-time");
+                gameLengthTime = arenaData.getInt("game-length-time");
                 //create arena
-                temparena = Arena.createArena(pos1, pos2, world, name, maxPlayers, false, plugin.getDataFolder() + "/Arenas/" + key);
+                temparena = Arena.createArena(pos1, pos2, world, name, minPlayers, maxPlayers, skipTimerAt, lobbyWaitTime, lobbySkipTime, gameWaitTime, gameLengthTime, lobby, lobbyWorld, exit, exitWorld, spec, center, false, "/Arenas/" + key + '/');
                 //cycle spawns
                 for (short i = 1; i < 65534; i++) {
                     //load from file
@@ -129,8 +171,8 @@ public class Main extends JavaPlugin implements Listener {
     }
     /**
     *
-    * This method creates files if needed
-    * Only needed if file is missing (first usage)
+    * This method creates files if needed. 
+    * Only needed if file is missing (first usage). 
     *
     */
     private void createFiles() {
@@ -170,6 +212,11 @@ public class Main extends JavaPlugin implements Listener {
             pd.load(playerdataf);
         } 
         catch (IOException | InvalidConfigurationException e) {}
+        //arena folder
+        File arenaFolder = new File(getDataFolder(), "/Arenas/");
+        if (!arenaFolder.exists()) {
+            arenaFolder.mkdirs();
+        }
     } 
     /**
     *
@@ -186,10 +233,10 @@ public class Main extends JavaPlugin implements Listener {
     public void onEnable() {
         //create plugin instance
         plugin = this;
-        FileConfiguration language = FileManager.getCustomData(plugin,"language",ROOT);
         //creates files if needed
         createFiles();
         //language variables
+        FileConfiguration language = FileManager.getCustomData(plugin,"language",ROOT);
         String prefixMessage = ChatColor.translateAlternateColorCodes('&', language.getString("Prefix-Message")); 
         String unsupportedVersionAMessage = ChatColor.translateAlternateColorCodes('&', language.getString("Unsupported-VersionA-Message")); 
         String unsupportedVersionBMessage = ChatColor.translateAlternateColorCodes('&', language.getString("Unsupported-VersionB-Message")); 
@@ -205,7 +252,7 @@ public class Main extends JavaPlugin implements Listener {
             sender.sendMessage(prefixMessage + unsupportedVersionCMessage); 
         }
         //check for online mode
-        if (!(getServer().getOnlineMode())) {
+        if ((getServer().getOnlineMode())) {
             sender.sendMessage(prefixMessage + unsecureServerAMessage);
             sender.sendMessage(prefixMessage + unsecureServerBMessage);
             sender.sendMessage(prefixMessage + unsecureServerCMessage);
@@ -246,13 +293,16 @@ public class Main extends JavaPlugin implements Listener {
         IngotPlayer currentIPlayer = null;
         //reset iplayer booleans
         for (Player key : Bukkit.getOnlinePlayers()) {
-            //get iplayerdata
-            currentIPlayer = IngotPlayer.selectPlayer(key.getName(), false, null, null);
-            //reset vars
-            currentIPlayer.setInGame(false);
-            currentIPlayer.setIsPlaying(false);
-            currentIPlayer.setIsFrozen(false);
-            currentIPlayer.setGame("none");
+            try {
+                //get iplayerdata
+                currentIPlayer = IngotPlayer.selectPlayer(key.getName(), false, null, null);
+                //reset vars
+                currentIPlayer.setInGame(false);
+                currentIPlayer.setIsPlaying(false);
+                currentIPlayer.setIsFrozen(false);
+                currentIPlayer.setGame("none");
+            }
+            catch (IndexOutOfBoundsException ex) {}
         }
         //saves files
         try {
