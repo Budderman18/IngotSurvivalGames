@@ -51,16 +51,51 @@ Scoreboard:
 Title:
     enable: false
     Join:
-        title: "&aYou have joined the game"
-        subtitle: "&bHave Fun!"
-        actionbar: "Plugin by Budderman18"
+        title: '&aYou have joined the game'
+        subtitle: '&bHave Fun!'
+        actionbar: 'Plugin by Budderman18'
         fadein: 10
         length: 100
         fadeout: 10
+    Start:
+        title: "&aThe game starts in &e"
+        subtitle: ""
+        actionbar: ""
+        fadein: 10
+        length: 60
+        fadeout: 10
     Leave:
-        title: "&aYou have left the game"
-        subtitle: "&bDon't do that!"
-        actionbar: "Plugin by Budderman18"
+        title: '&aYou have left the game'
+        subtitle: '&bDon''t do that!'
+        actionbar: 'Plugin by Budderman18'
+        fadein: 10
+        length: 100
+        fadeout: 10
+    InGameStart:
+        title: "&aThe game starts in &e"
+        subtitle: ""
+        actionbar: ""
+        fadein: 10
+        length: 60
+        fadeout: 10
+    InGameRelease:
+        title: "&aSTART!"
+        subtitle: ""
+        actionbar: ""
+        fadein: 10
+        length: 60
+        fadeout: 10
+    Death:
+        title: "&aYou died and are out of the game!"
+        subtitle: "&bFeel free to spectate!"
+        actionbar: ""
+        fadein: 10
+        length: 60
+        fadeout: 10
+    End:
+        title: "&aThe game is over!"
+        subtitle: "&aGood Game Everyone!"
+        actionbar: "Come back soon!"
         fadein: 10
         length: 100
         fadeout: 10
@@ -70,7 +105,7 @@ Title:
 #color sets the color
 #You can use blue, green, pink, purple, red, yellow and white
 Bossbar:
-    enable: true
+    enable: false
     sizeChangesBasedOnTimeLeft: true
     title: "&eMy Awesome Server!"
     color: "GREEN"
@@ -85,26 +120,16 @@ Bossbar:
 #    - arena1
 #    - arena2
 RandomJoin:
+  enable: false
+  Table1:
+    name: JoeMama
+    arenas:
+    - arena1
+    - arena2
+#Enable the spectator features
+#changeGamemode sets spectators into spectator mode and resets them back when they leave
+#if disabled, players will still be teleported to the spectator pos, just in the same gamemode
+#useful for shorter games with limited camera angles
+Spectate:
   enable: true
-  tables:
-    Table1:
-      name: Test
-      arenas:
-      - bdtest
-      - stress
-#Specify where the lobby is when joining a game
-Lobby:
-  world: world
-  x: 100
-  y: 100
-  z: 100
-  yaw: 0.0
-  pitch: 0.0
-#Specify where the exit location is when leaving a game
-Exit:
-  world: world
-  x: -100
-  y: 100
-  z: 100
-  yaw: 0.0
-  pitch: 0.0
+  changeGamemode: true

@@ -1,4 +1,7 @@
 name: IngotSurvivalGames
+authors:
+- Budderman18
+description: "A survival games plugin focused on simplicity and efficency."
 main: com.budderman18.IngotMinigamesAPI.Main
 version: 1.0
 api-version: 1.13
