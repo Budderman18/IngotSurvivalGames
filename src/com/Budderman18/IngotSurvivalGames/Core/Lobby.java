@@ -1,16 +1,19 @@
 package com.budderman18.IngotSurvivalGames.Core;
 
 import com.budderman18.IngotMinigamesAPI.Core.Data.Arena;
+import static com.budderman18.IngotMinigamesAPI.Core.Data.Arena.RUNNING;
+import static com.budderman18.IngotMinigamesAPI.Core.Data.Arena.WAITING;
 import com.budderman18.IngotMinigamesAPI.Core.Data.IngotPlayer;
 import com.budderman18.IngotMinigamesAPI.Core.Handlers.ScoreboardHandler;
 import com.budderman18.IngotMinigamesAPI.Core.Data.Spawn;
 import com.budderman18.IngotMinigamesAPI.Core.Handlers.TablistHandler;
-import com.budderman18.IngotMinigamesAPI.Core.Data.Timer;
+import com.budderman18.IngotMinigamesAPI.Core.Handlers.TimerHandler;
 import com.budderman18.IngotMinigamesAPI.Core.Handlers.TitleHandler;
 import com.budderman18.IngotMinigamesAPI.Core.Data.FileManager;
 import com.budderman18.IngotMinigamesAPI.Core.Handlers.BossbarHandler;
 import com.budderman18.IngotMinigamesAPI.Main;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.bukkit.entity.Player;
 import org.bukkit.Bukkit;
@@ -36,7 +39,7 @@ public class Lobby implements Listener {
     private final IngotPlayer IngotPlayer = new IngotPlayer(plugin);
     private final Spawn Spawn = new Spawn(plugin);
     private Game game = new Game();
-    private Timer currentTimer = null;
+    private TimerHandler currentTimer = null;
     //global vars
     private IngotPlayer iplayer = null;
     /**
@@ -93,10 +96,11 @@ public class Lobby implements Listener {
     public void joinLobby(Player player, Arena arenaMethod) {
         //files
         FileConfiguration config = FileManager.getCustomData(plugin,"config",ROOT);
+        arenaData = FileManager.getCustomData(plugin, "settings", arenaMethod.getFilePath());
         //local vars
-        Location lobbyloc =  new Location(Bukkit.getWorld(config.getString("Lobby.world")), config.getDouble("Lobby.x"), config.getDouble("Lobby.y"), config.getDouble("Lobby.z"),(float) config.getDouble("Lobby.yaw"),(float) config.getDouble("Lobby.pitch"));
+        Location lobbyloc =  new Location(Bukkit.getWorld(arenaData.getString("Lobby.world")), arenaData.getDouble("Lobby.x"), arenaData.getDouble("Lobby.y"), arenaData.getDouble("Lobby.z"),(float) arenaData.getDouble("Lobby.yaw"),(float) arenaData.getDouble("Lobby.pitch"));
         byte currentPlayers = arenaMethod.getCurrentPlayers();
-        long start = 5;
+        long start = arenaMethod.getLobbyWaitTime();
         long end = 0;
         //create or obtain ingotplayer
         iplayer = IngotPlayer.selectPlayer(player.getName(), false, null, null);
@@ -141,47 +145,60 @@ public class Lobby implements Listener {
             arenaData = FileManager.getCustomData(plugin, "settings", "/Arenas/" + arenaMethod.getName() + '/');
             List<String> currentSpawn = null;
             List<Spawn> spawns = new ArrayList<>(); 
+            Spawn tempspawn = null;
+            int tempx = 0;
+            int tempy = 0;
+            int tempz = 0;
             //cycle through all loaded spawn names
-            for (short i = 1; i < 65534; i++) {
+            for (short i = 0; i < arenaMethod.getSpawns().size(); i++) {
                 currentSpawn = new ArrayList<>();
-                currentSpawn.add(arenaData.getString("Spawnpoints.Spawn" + Short.toString(i) + ".name"));
-                currentSpawn.add(arenaData.getString("Spawnpoints.Spawn" + Short.toString(i) + ".x"));
-                currentSpawn.add(arenaData.getString("Spawnpoints.Spawn" + Short.toString(i) + ".y"));
-                currentSpawn.add(arenaData.getString("Spawnpoints.Spawn" + Short.toString(i) + ".z"));
+                currentSpawn.add(arenaMethod.getSpawns().get(i).getName());
+                currentSpawn.add(Double.toString(arenaMethod.getSpawns().get(i).getLocation()[0]));
+                currentSpawn.add(Double.toString(arenaMethod.getSpawns().get(i).getLocation()[1]));
+                currentSpawn.add(Double.toString(arenaMethod.getSpawns().get(i).getLocation()[2]));
                 if (currentSpawn.get(0) != null) {
-                    spawns.add(Spawn.selectSpawn("Spawn" + Short.toString(i), false, null, null));
-                    arenaMethod.addSpawn(spawns.get(i-1));
-                }
-                else {
-                    break;
+                    spawns.add(Spawn.selectSpawn("Spawn" + Short.toString((short) (i + 1)), false, null, null));
                 }
             }
             //cycle through all players
             for (Player key : Bukkit.getOnlinePlayers()) {
-                //get iplayerdata
-                currentIPlayer = iplayer.selectPlayer(key.getName(), false, null, null);
+                currentIPlayer = IngotPlayer.selectPlayer(key.getName(), false, null, null);
                 //check if iplayer is ingame
                 if (currentIPlayer.getInGame() == true && currentIPlayer.getGame().equalsIgnoreCase(arenaMethod.getName())) {
                     //move to spawn
-                    Spawn.moveToRandomSpawn(spawns, key);
+                    tempspawn = Spawn.moveToRandomSpawn(spawns, key);
+                    while (tempspawn.getIsOccupied() == true) {
+                        tempspawn = Spawn.moveToRandomSpawn(spawns, key);
+                    }
+                    tempspawn.setIsOccupied(true);
                     //leave lobby and join game
                     this.leaveLobby(key, arenaMethod, true);
                 }
             }
         };
-        //start timer
-        currentTimer = Timer.startTimer(plugin, start, end, action);
         //check if scoreboards are enabled
         if (config.getBoolean("Scoreboard.enable") == true) {
             //update Scoreboard
             this.updateScoreboard(arenaMethod);
         }
         //check if nobody is currently playing to prevent errors
-        if (currentPlayers > 1) {
+        if (arenaMethod.getCurrentPlayers() > arenaMethod.getMinPlayers()) {
             currentTimer.endTimer(false, null);
+            currentTimer = TimerHandler.startTimer(plugin, start, end, action);
         }
         //start timer
-        currentTimer.startTimer(plugin, start, end, action);
+        if (arenaMethod.getCurrentPlayers() == arenaMethod.getMinPlayers()) {
+            for (Player key : Bukkit.getOnlinePlayers()) {
+                //current player
+                IngotPlayer currentIPlayer = iplayer.selectPlayer(key.getName(), false, null, null);
+                if (config.getBoolean("Title.enable") == true && currentIPlayer.getInGame() == true) {
+                    //set title and actionbar
+                    TitleHandler.setTitle(Bukkit.getPlayer(currentIPlayer.getUsername()), config.getString("Title.Start.title") + arenaMethod.getLobbyWaitTime() + " seconds.", config.getString("Title.Start.subtitle"), config.getInt("Title.Start.fadein"), config.getInt("Title.Start.length"), config.getInt("Title.Start.fadeout"));
+                    TitleHandler.setActionBar(Bukkit.getPlayer(currentIPlayer.getUsername()), config.getString("Title.Start.actionbar"));
+                }
+            }
+            currentTimer = TimerHandler.startTimer(plugin, start, end, action);
+        }
     }
     /**
     *
@@ -198,8 +215,9 @@ public class Lobby implements Listener {
     public void leaveLobby(Player player, Arena arenaMethod, boolean stillInGame) {
         //files
         FileConfiguration config = FileManager.getCustomData(plugin,"config",ROOT);
+        FileConfiguration arenaData = FileManager.getCustomData(plugin,"settings",arenaMethod.getFilePath());
         //local vars
-        Location exit = new Location(Bukkit.getWorld(config.getString("Exit.world")), config.getDouble("Exit.x"), config.getDouble("Exit.y"), config.getDouble("Exit.z"), (float) config.getDouble("Exit.yaw"), (float) config.getDouble("Exit.pitch"));
+        Location exitLoc = new Location(Bukkit.getWorld(arenaData.getString("Exit.world")), arenaData.getDouble("Exit.x"), arenaData.getDouble("Exit.y"), arenaData.getDouble("Exit.z"),(float) arenaData.getDouble("Exit.yaw"),(float) arenaData.getDouble("Exit.pitch"));
         byte currentPlayers = arenaMethod.getCurrentPlayers();
         iplayer = IngotPlayer.selectPlayer(player.getName(), false, null, null);
         //check if player should not be ingame
@@ -219,7 +237,7 @@ public class Lobby implements Listener {
             //clear bossbar
             BossbarHandler.clearBar(player);
             //teleport to the exit location
-            player.teleport(exit);
+            player.teleport(exitLoc);
             //reset tablist to original
             if (config.getBoolean("Tablist.enable") == true) {
                 //reset tablist
@@ -235,6 +253,7 @@ public class Lobby implements Listener {
             //check if arena is empty
             if (currentPlayers <= 1) {
                 arenaMethod.setIsActive(false);
+                arenaMethod.setStatus("WAITING", false);
             }
         }
         //if player is still ingame
@@ -246,6 +265,7 @@ public class Lobby implements Listener {
             game.joinGame(player, arenaMethod, false);
             //start game
             arenaMethod.setIsActive(true);
+            arenaMethod.setStatus("RUNNING", false);
         }
     }
 }

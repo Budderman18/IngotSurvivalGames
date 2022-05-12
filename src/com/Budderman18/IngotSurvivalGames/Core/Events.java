@@ -4,6 +4,7 @@
  */
 package com.budderman18.IngotSurvivalGames.Core;
 
+import com.budderman18.IngotMinigamesAPI.Core.Data.Arena;
 import com.budderman18.IngotMinigamesAPI.Core.Handlers.ChatHandler;
 import com.budderman18.IngotMinigamesAPI.Core.Data.IngotPlayer;
 import com.budderman18.IngotMinigamesAPI.Core.Data.FileManager;
@@ -15,6 +16,8 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.bukkit.Bukkit;
+import static org.bukkit.GameMode.ADVENTURE;
+import static org.bukkit.GameMode.SPECTATOR;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 import static org.bukkit.entity.EntityType.PLAYER;
@@ -24,6 +27,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -51,8 +55,7 @@ public class Events implements Listener {
     private boolean inGame = false;
     private boolean isPlaying = false;
     private boolean isFrozen = false;
-    private String game = "none";
-    IngotPlayer iplayer = null;
+    private IngotPlayer iplayer = null;
     /**
     *
     * This method handles block breaking. 
@@ -177,16 +180,33 @@ public class Events implements Listener {
         //get IngotPlayerdata
         iplayer = IngotPlayer.selectPlayer(event.getPlayer().getName(), false, null, null);
         isFrozen = iplayer.getIsFrozen();
+        //get arena
+        Arena arena = new Arena(plugin);
+        Arena selectedArena = arena;
+        if (iplayer.getGame() != null) {
+            selectedArena = arena.selectArena(iplayer.getGame(), false, null, null);
+        }
         //checkl if player is froxen
         if (isFrozen == true) {
             //obtain position player moves to
             frozenpos = event.getTo();
             //reset position to current position
-            frozenpos.setX(event.getPlayer().getLocation().getX());
-            frozenpos.setY(event.getPlayer().getLocation().getY());
-            frozenpos.setZ(event.getPlayer().getLocation().getZ());
+            frozenpos.setX(event.getFrom().getX());
+            frozenpos.setY(event.getFrom().getY());
+            frozenpos.setZ(event.getFrom().getZ());
             //teleport player
             event.getPlayer().teleport(frozenpos);
+        }
+        //check if player is spectating and in arena
+        if (iplayer.getGame() != null) {
+            if (isPlaying == true && event.getPlayer().getGameMode() == SPECTATOR && selectedArena.isInArena(event.getPlayer()) == false) {
+                //move player to center
+                frozenpos = event.getPlayer().getLocation();
+                frozenpos.setX(0);
+                frozenpos.setY(64);
+                frozenpos.setZ(0);
+                event.getPlayer().teleport(frozenpos);
+            }
         }
     }
     /**
@@ -216,7 +236,7 @@ public class Events implements Listener {
                 currentIPlayer = IngotPlayer.selectPlayer(key.getName(), false, null, null);
                 inGame = currentIPlayer.getInGame();
                 //checfk if player is inGame
-                if (inGame == true) {
+                if (inGame == true && currentIPlayer.getGame().equals(iplayer.getGame())) {
                     //add player to list
                     players.add(key);
                 }
@@ -229,8 +249,32 @@ public class Events implements Listener {
             }
         }
     }
-
-   /**
+    /**
+    *
+    * This method handles player deaths. 
+    *
+    * @param event
+    */
+    @EventHandler
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        //files
+        FileConfiguration arenaData = null;
+        Location spec = null;
+        Arena Arena = new Arena(plugin);
+        Arena currentArena = null;
+        if (event.getEntityType() == PLAYER)  {
+            IngotPlayer selectedPlayer = iplayer.selectPlayer(event.getEntity().getName(), false, null, null);
+            if (selectedPlayer.getIsPlaying() == true) {
+                Game game = new Game();
+                game.isSpectator(event.getEntity(), true);
+                currentArena = Arena.selectArena(iplayer.getGame(), false, null, null);
+                arenaData = FileManager.getCustomData(plugin, "settings", currentArena.getFilePath());
+                spec = new Location(Bukkit.getWorld(currentArena.getWorld()), arenaData.getDouble("Spec.x"), arenaData.getDouble("Spec.y"), arenaData.getDouble("Spec.z"), (float) arenaData.getDouble("Spec.yaw"), (float) arenaData.getDouble("Spec.pitch"));
+                event.getEntity().teleport(spec);
+            }
+        }
+    }
+    /**
     *
     * This method handles player joining. 
     *
@@ -245,11 +289,9 @@ public class Events implements Listener {
         Player player = event.getPlayer();
         //create IngotPlayer object
         IngotPlayer newPlayer = IngotPlayer.createPlayer(player);
-        if (pd.getString(event.getPlayer().getName()) == null) {
+        if (pd.getString(player.getName()) == null) {
             //set data
-            newPlayer.setUsername(pd.getString(event.getPlayer().getName()));
-            pd.createSection(event.getPlayer().getName());
-            newPlayer.setUUID(pd.getString(event.getPlayer().getName() + ".uuid"));
+            pd.createSection(player.getName());
             //save to file
             pd.set(event.getPlayer().getName() + ".uuid", event.getPlayer().getUniqueId().toString());
             try {
@@ -258,6 +300,10 @@ public class Events implements Listener {
             catch (IOException ex) {
                 Logger.getLogger(Events.class.getName()).log(Level.SEVERE, null, ex);
             }
+        }
+        else {
+            newPlayer.setUsername(player.getName());
+            newPlayer.setUUID(pd.getString(event.getPlayer().getName() + ".uuid"));
         }
     }
     /**
@@ -268,8 +314,14 @@ public class Events implements Listener {
     */
     @EventHandler
     public void onPlayerLeave(PlayerQuitEvent event) {
-        //IngotPlayerdata
-        iplayer = IngotPlayer.selectPlayer(event.getPlayer().getName(), false, null, null);
-        iplayer.deletePlayer();
+        try {
+            //IngotPlayerdata
+            iplayer = IngotPlayer.selectPlayer(event.getPlayer().getName(), false, null, null);
+            iplayer.deletePlayer();
+            if (iplayer.getIsPlaying() == true) {
+                event.getPlayer().setGameMode(ADVENTURE);
+            }
+        }
+        catch (IndexOutOfBoundsException ex) {}
     }
 }
