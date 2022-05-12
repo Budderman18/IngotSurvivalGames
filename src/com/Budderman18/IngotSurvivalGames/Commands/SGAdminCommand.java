@@ -41,13 +41,11 @@ public class SGAdminCommand implements TabExecutor {
     //global vars
     private int[] pos1 = null;
     private int[] pos2 = null;
+    private double[] tempLoc = new double[5];
+    private float[] loc = new float[5];
     private Arena currentArena = null;
     private Spawn currentSpawn = null;
-    private double tempx = 0;
-    private double tempy = 0;
-    private double tempz = 0;
     private List<Spawn> spawns = new ArrayList<>();
-    private List<String> spawnNames = new ArrayList<>();
     //language
     private String prefixMessage = ChatColor.translateAlternateColorCodes('&', language.getString("Prefix-Message"));
     private String noPermissionMessage = ChatColor.translateAlternateColorCodes('&', language.getString("No-Permission-Message"));
@@ -56,6 +54,7 @@ public class SGAdminCommand implements TabExecutor {
     private String arenaPos1SetMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Pos1-Set-Message"));
     private String arenaPos2SetMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Pos2-Set-Message"));
     private String arenaCreateInvalidNameMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Create-Invalid-Name-Message"));
+    private String arenaCreateInvalidMinPlayersMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Create-Invalid-Min-Players-Message"));
     private String arenaCreateInvalidMaxPlayersMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Create-Invalid-Max-Players-Message"));
     private String arenaCreateInvalidPositionsMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Create-Invalid-Positions-Message"));
     private String arenaCreateWrongPositionsMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Create-Wrong-Positions-Message"));
@@ -67,7 +66,10 @@ public class SGAdminCommand implements TabExecutor {
     private String arenaSelectInvalidArenaMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Select-Invalid-Arena-Message"));
     private String arenaSpawnCreateSpawnCreatedMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Spawn-Create-Spawn-Created-Message"));
     private String arenaSpawnCreateInvalidSpawnMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Spawn-Create-Invalid-Spawn-Message"));
+    private String arenaSpawnCreateSpawne = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Spawn-Create-Spawns-Full-Message"));
+    private String arenaSpawnCreateSpawnsFullMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Spawn-Create-Spawns-Full-Message"));
     private String arenaSpawnDeleteSpawnDeletedMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Spawn-Delete-Spawn-Deleted-Message"));
+    private String arenaSpawnDeleteNoSpawnsMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Delete-No-Spawns-Message"));
     private String arenaSpawnDeleteInvalidSpawnMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Spawn-Delete-Invalid-Spawn-Message"));
     private String arenaSpawnListStart1Message = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Spawn-List-Start1-Message"));
     private String arenaSpawnListStart2Message = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Arena-Spawn-List-Start2-Message"));
@@ -94,6 +96,210 @@ public class SGAdminCommand implements TabExecutor {
     private String helpEndMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdminHelp-End-Message"));
     private String reloadMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Reload-Message"));
     private String versionMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGAdmin-Version-Message"));
+    /**
+    *
+    * This method sets a given position. 
+    *
+    */
+    private void setLocation(Arena currentArena, Player player, double[] tempLoc, String var) {
+        //files
+        arenaData = FileManager.getCustomData(plugin, "settings", currentArena.getFilePath());
+        //local vars
+        tempLoc[0] = player.getLocation().getX();
+        tempLoc[1] = player.getLocation().getY();
+        tempLoc[2] = player.getLocation().getZ();
+        tempLoc[3] = player.getLocation().getYaw();
+        tempLoc[4] = player.getLocation().getPitch();
+        //check if positiones should be centerized
+        if (config.getBoolean("centerize-teleport-locations") == true) {
+            loc = currentArena.centerizeLocation(tempLoc, true);
+            tempLoc[0] = loc[0];
+            tempLoc[1] = loc[1];
+            tempLoc[2] = loc[2];
+            tempLoc[3] = loc[3];
+            tempLoc[4] = loc[4];
+        }
+    }
+    /**
+    *
+    * This method edits a given option of an arena. 
+    *
+    * @param sender
+    * @param currentArena
+    * @param args
+    * @param preSelected
+    * @return
+    */
+    private boolean editOption(CommandSender sender, Arena currentArena, Player player, String[] args, boolean preSelected) {
+        //local vars
+        byte index = 4;
+        if (preSelected == true) {
+            index--;
+        }
+        try {
+            //check if name is being changed
+            if (args[2].equalsIgnoreCase("name")) {
+                //set arena's name
+                currentArena.setName(args[index], true, "/Arenas/" + args[index] + '/');
+                sender.sendMessage(prefixMessage + arenaEditEditedMessage + "name");
+                //end command
+                return true;
+            }
+            //check if maxPlayers is being changed
+            if (args[2].equalsIgnoreCase("minPlayers")) {
+                try {
+                    //set maxPlayers
+                    currentArena.setMinPlayers(Byte.parseByte(args[index]), true);
+                    sender.sendMessage(prefixMessage + arenaEditEditedMessage + "minPlayers");
+                    //end command
+                    return true;
+                } //run if maxPlayers is invalid
+                catch (NumberFormatException ex) {
+                    sender.sendMessage(prefixMessage + arenaEditInvalidArgumentMessage);
+                    //end command
+                    return true;
+                }
+            }
+            //check if maxPlayers is being changed
+            if (args[2].equalsIgnoreCase("maxPlayers")) {
+                try {
+                    //set arena's maxPlayers
+                    currentArena.setMaxPlayers(Byte.parseByte(args[index]), true);
+                    sender.sendMessage(prefixMessage + arenaEditEditedMessage + "maxPlayers");
+                    //end command
+                    return true;
+                } 
+                //run if maxPlayers is invalid
+                catch (NumberFormatException ex) {
+                    sender.sendMessage(prefixMessage + arenaEditInvalidArgumentMessage);
+                    //end command
+                    return true;
+                }
+            }
+            //check if skipTimerAt is being changed
+            if (args[2].equalsIgnoreCase("skipTimerAt")) {
+                try {
+                    if (Byte.parseByte(args[index]) <= currentArena.getMaxPlayers() && Byte.parseByte(args[index]) > 1) {
+                        //set arena's skipTimerAt
+                        currentArena.setSkipTimerAt(Byte.parseByte(args[index]), true);
+                        sender.sendMessage(prefixMessage + arenaEditEditedMessage + "skipTimerAt");
+                        //end command
+                        return true;
+                    }
+                    else {
+                        Byte.parseByte(" ");
+                    }
+                } 
+                //run if skipTimerAt is invalid
+                catch (NumberFormatException ex) {
+                    sender.sendMessage(prefixMessage + arenaEditInvalidArgumentMessage);
+                    //end command
+                    return true;
+                }
+            }
+            //check if lobby is being changed
+            if (args[2].equalsIgnoreCase("lobby")) {
+                setLocation(currentArena, player, tempLoc, "Lobby");
+                currentArena.setLobby(tempLoc, true);
+                currentArena.setLobbyWorld(player.getWorld().getName(), true);
+                sender.sendMessage(prefixMessage + arenaEditEditedMessage + "lobby");
+                return true;
+            }
+            //check if exit is being changed
+            if (args[2].equalsIgnoreCase("exit")) {
+                setLocation(currentArena, player, tempLoc, "Exit");
+                currentArena.setExit(tempLoc, true);
+                currentArena.setExitWorld(player.getWorld().getName(), true);
+                sender.sendMessage(prefixMessage + arenaEditEditedMessage + "exit");
+                return true;
+            }
+            //check if spec is being changed
+            if (args[2].equalsIgnoreCase("spec")) {
+                setLocation(currentArena, player, tempLoc, "Spec");
+                currentArena.setSpectatorPos(tempLoc, true);
+                sender.sendMessage(prefixMessage + arenaEditEditedMessage + "spec");
+                return true;
+            }
+            //check if center is being changed
+            if (args[2].equalsIgnoreCase("center")) {
+                setLocation(currentArena, player, tempLoc, "Center");
+                currentArena.setCenter(tempLoc, true);
+                sender.sendMessage(prefixMessage + arenaEditEditedMessage + "center");
+                return true;
+            }
+            //check if name is being changed
+            if (args[2].equalsIgnoreCase("lobbyWaitTime")) {
+                //set arena's name
+                try {
+                    currentArena.setLobbyWaitTime(Integer.parseInt(args[index]), true);
+                    sender.sendMessage(prefixMessage + arenaEditEditedMessage + "lobby-wait-time");
+                    //end command
+                    return true;
+                }
+                catch (NumberFormatException ex) {
+                    sender.sendMessage(prefixMessage + arenaEditInvalidArgumentMessage);
+                    //end command
+                    return true;  
+                }
+            }
+            //check if name is being changed
+            if (args[2].equalsIgnoreCase("lobbySkipTime")) {
+                //set arena's name
+                try {
+                    currentArena.setLobbySkipTime(Integer.parseInt(args[index]), true);
+                    sender.sendMessage(prefixMessage + arenaEditEditedMessage + "lobby-skip-time");
+                    //end command
+                    return true;
+                }
+                catch (NumberFormatException ex) {
+                    sender.sendMessage(prefixMessage + arenaEditInvalidArgumentMessage);
+                    //end command
+                    return true;  
+                }
+            }
+            //check if name is being changed
+            if (args[2].equalsIgnoreCase("gameWaitTime")) {
+                //set arena's name
+                try {
+                    currentArena.setGameWaitTime(Integer.parseInt(args[index]), true);
+                    sender.sendMessage(prefixMessage + arenaEditEditedMessage + "game-wait-time");
+                    //end command
+                    return true;
+                }
+                catch (NumberFormatException ex) {
+                    sender.sendMessage(prefixMessage + arenaEditInvalidArgumentMessage);
+                    //end command
+                    return true;  
+                }
+            }
+            //check if name is being changed
+            if (args[2].equalsIgnoreCase("gameLength")) {
+                //set arena's name
+                try {
+                    currentArena.setGameLengthTime(Integer.parseInt(args[index]), true);
+                    sender.sendMessage(prefixMessage + arenaEditEditedMessage + "game-length");
+                    //end command
+                    return true;
+                }
+                catch (NumberFormatException ex) {
+                    sender.sendMessage(prefixMessage + arenaEditInvalidArgumentMessage);
+                    //end command
+                    return true;  
+                }
+            }
+            else {
+                sender.sendMessage(prefixMessage + arenaEditInvalidArgumentMessage);
+                //end command
+                return true;
+            }
+        } 
+        //run if arena is invalid
+        catch (IllegalArgumentException ex) {
+            sender.sendMessage(prefixMessage + arenaInvalidArenaMessage);
+            //end command
+            return true;
+        }
+    }
     /**
     *
     * This method handles the SGAdmin command. 
@@ -137,6 +343,12 @@ public class SGAdminCommand implements TabExecutor {
                                         //end command
                                         return true;
                                     }
+                                    //check if minPlayers is null
+                                    if (args[4] ==  null || Integer.parseInt(args[4]) < 2) {
+                                        sender.sendMessage(prefixMessage + arenaCreateInvalidMinPlayersMessage);
+                                        //end command
+                                        return true;
+                                    }
                                     //check if pos1 or pos2 is not set
                                     else if (pos1 == null || pos2 == null) {
                                         sender.sendMessage(prefixMessage + arenaCreateInvalidPositionsMessage);
@@ -148,7 +360,7 @@ public class SGAdminCommand implements TabExecutor {
                                         //check if pos1 is not greater than pos2
                                         if (!(pos1[0] > pos2[0]) || pos1[1] > pos2[1] || pos1[2] > pos2[2]) {
                                             //create arena
-                                            currentArena = Arena.createArena(pos1, pos2, player.getWorld().getName(), args[2], Byte.parseByte(args[3]), true, "/Arenas/" + args[2] + '/');
+                                            currentArena = Arena.createArena(pos1, pos2, player.getWorld().getName(), args[2], Byte.parseByte(args[4]), Byte.parseByte(args[3]),(byte) 0, 0, 0, 0, 0, null, "", null, "", null, null, true, "/Arenas/" + args[2] + '/');
                                             currentArena.createArenaSchematic();
                                             //clear pos arrays
                                             pos1 = null;
@@ -192,89 +404,22 @@ public class SGAdminCommand implements TabExecutor {
                                 //edit
                                 if (args[1].equalsIgnoreCase("edit")) {
                                     //check if there is a specifed arena
-                                    if (args.length > 4) {
-                                        try {
-                                            //load arena
-                                            currentArena = Arena.selectArena(args[3], false, null, null);
-                                            //check if name is being changed
-                                            if (args[2].equalsIgnoreCase("name")) {
-                                                //set arena's name
-                                                currentArena.setName(args[4], true,  "/Arenas/" + args[4] + '/');
-                                                sender.sendMessage(prefixMessage + arenaEditEditedMessage + "name");
-                                                //end command
-                                                return true;
-                                            }
-                                            //check if maxPLayers is being changed
-                                            if (args[2].equalsIgnoreCase("maxPlayers")) {
-                                                try {
-                                                    //set arena's maxPlayers
-                                                    currentArena.setMaxPlayers(Byte.parseByte(args[4]), true);
-                                                    sender.sendMessage(prefixMessage + arenaEditEditedMessage + "maxPlayers");
-                                                    //end command
-                                                    return true;
-                                                }
-                                                //run if maxPlayers is invalid
-                                                catch (NumberFormatException ex) {
-                                                    sender.sendMessage(prefixMessage + arenaEditInvalidArgumentMessage);
-                                                    //end command
-                                                    return true;
-                                                }
-                                            } 
-                                            //run if edit args are invalid
-                                            else {
-                                                sender.sendMessage(prefixMessage + arenaEditInvalidArgumentMessage);
-                                                //end command
-                                                return true;
-                                            }
-                                        } 
-                                        //run if arena is invalid
-                                        catch (IllegalArgumentException ex) {
-                                            sender.sendMessage(prefixMessage + arenaInvalidArenaMessage);
-                                            //end command
-                                            return true;
-                                        }
+                                    if (args.length > 4 || (args.length == 4 && (args[2].equalsIgnoreCase("lobby") || args[2].equalsIgnoreCase("exit") || args[2].equalsIgnoreCase("spec") || args[2].equalsIgnoreCase("center")))) {
+                                        //load arena
+                                        currentArena = Arena.selectArena(args[3], false, null, null);
+                                        //edit option
+                                        return editOption(sender, currentArena, player, args, false);
+                                    }
+                                    //check if there's no selected arena
+                                    if (currentArena == null) {
+                                        sender.sendMessage(prefixMessage + arenaInvalidArenaMessage);
+                                        return true;
                                     }
                                     //check if using selected arena
-                                    if (args.length == 4) {
-                                        try {
-                                            //check if name is being changed
-                                            if (args[2].equalsIgnoreCase("name")) {
-                                                //set name
-                                                currentArena.setName(args[3], true, "/Arenas/" + args[3] + '/');
-                                                sender.sendMessage(prefixMessage + arenaEditEditedMessage + "name");
-                                                //end command
-                                                return true;
-                                            }
-                                            //check if maxPlayers is being changed
-                                            if (args[2].equalsIgnoreCase("maxPlayers")) {
-                                                try {
-                                                    //set maxPlayers
-                                                    currentArena.setMaxPlayers(Byte.parseByte(args[3]), true);
-                                                    sender.sendMessage(prefixMessage + arenaEditEditedMessage + "maxPlayers");
-                                                    //end command
-                                                    return true;
-                                                }
-                                                //run if maxPlayers is invalid
-                                                catch (NumberFormatException ex) {
-                                                    sender.sendMessage(prefixMessage + arenaEditInvalidArgumentMessage);
-                                                    //end command
-                                                    return true;
-                                                }
-                                            } 
-                                            //run if arguments are invalid
-                                            else {
-                                                sender.sendMessage(prefixMessage + arenaEditInvalidArgumentMessage);
-                                                //end command
-                                                return true;
-                                            }
-                                        }
-                                        //run if arena is invalid
-                                        catch (NullPointerException ex) {
-                                            sender.sendMessage(prefixMessage + arenaInvalidArenaMessage);
-                                            //end command
-                                            return true;
-                                        }
-                                    } 
+                                    if (args.length == 4 || (args.length == 3 && (args[2].equalsIgnoreCase("lobby") || args[2].equalsIgnoreCase("exit") || args[2].equalsIgnoreCase("spec") || args[2].equalsIgnoreCase("center")))) {
+                                        //edit option
+                                        return editOption(sender, currentArena, player, args, true);
+                                    }
                                     //run if edit args are invalid
                                     else {
                                         sender.sendMessage(prefixMessage + arenaEditInvalidArgumentMessage);
@@ -314,57 +459,27 @@ public class SGAdminCommand implements TabExecutor {
                                 //regenerate
                                 if (args[1].equalsIgnoreCase("regenerate")) {
                                     try {
-                                        //check if name is not null
+                                        sender.sendMessage(prefixMessage + arenaRegenerateRegenerated1Message);
+                                        //select arena
                                         if (args[2] != null) {
-                                            try {
-                                                sender.sendMessage(prefixMessage + arenaRegenerateRegenerated1Message);
-                                                //select arena
-                                                currentArena = Arena.selectArena(args[2], false, null, null);
-                                                //regenerate arena
-                                                currentArena.loadArenaSchematic();
-                                                sender.sendMessage(prefixMessage + arenaRegenerateRegenerated2Message);
-                                                //end command
-                                                return true;
-                                            }
-                                            //run is name is invalid
-                                            catch (IllegalArgumentException ex) {
-                                                sender.sendMessage(prefixMessage + arenaInvalidArenaMessage);
-                                                //end command
-                                                return true;
-                                            }
+                                            currentArena = Arena.selectArena(args[2], false, null, null);
                                         }
-                                        //run if regen args are invalid
-                                        else {
-                                            sender.sendMessage(prefixMessage + arenaRegenerateInvalidArenaMessage);
-                                            //end command
-                                            return true;
-                                        }
-                                    }
-                                    //run if using selected arena
-                                    catch (ArrayIndexOutOfBoundsException ex) {
-                                        //check if arena is not null
+                                        //regenerate arena
                                         if (currentArena != null) {
-                                            try {
-                                                sender.sendMessage(prefixMessage + arenaRegenerateRegenerated1Message);
-                                                //regenerate arena
-                                                currentArena.loadArenaSchematic();
-                                                sender.sendMessage(prefixMessage + arenaRegenerateRegenerated2Message);
-                                                //end command
-                                                return true;
-                                            }
-                                            //run if arena is somehow invalid
-                                            catch (IllegalArgumentException exc) {
-                                                sender.sendMessage(prefixMessage + arenaInvalidArenaMessage);
-                                                //end command
-                                                return true;
-                                            }
-                                        }
-                                        //run if regen args are invalid
-                                        else {
+                                            currentArena.loadArenaSchematic();
+                                            sender.sendMessage(prefixMessage + arenaRegenerateRegenerated2Message);
+                                            //end command
+                                            return true;
+                                        } else {
                                             sender.sendMessage(prefixMessage + arenaRegenerateInvalidArenaMessage);
                                             //end command
                                             return true;
                                         }
+                                    } //run is name is invalid
+                                    catch (IllegalArgumentException | ArrayIndexOutOfBoundsException ex) {
+                                        sender.sendMessage(prefixMessage + arenaRegenerateInvalidArenaMessage);
+                                        //end command
+                                        return true;
                                     }
                                 }
                             }
@@ -377,63 +492,64 @@ public class SGAdminCommand implements TabExecutor {
                                         //create spawn
                                         if (args[2].equalsIgnoreCase("create")) {
                                             //get files
-                                            arenadataf = new File(plugin.getDataFolder() + "/Arenas/" + args[3] + '/', "settings.yml");
-                                            arenaData = FileManager.getCustomData(plugin, "settings", "/Arenas/" + args[3] + '/');
-                                            //get arenas
-                                            currentArena = Arena.selectArena(args[3], false, null, null);
+                                            if (args.length == 3 && currentArena != null) {
+                                                arenadataf = new File(plugin.getDataFolder() + "/Arenas/" + currentArena.getName() + '/', "settings.yml");
+                                                arenaData = FileManager.getCustomData(plugin, "settings", "/Arenas/" + currentArena.getName() + '/');
+                                            }
+                                            else if (args.length == 3 && currentArena == null) {
+                                                sender.sendMessage(prefixMessage + arenaInvalidArenaMessage);
+                                                return true;
+                                            }
+                                            else {
+                                                arenadataf = new File(plugin.getDataFolder() + "/Arenas/" + args[3] + '/', "settings.yml");
+                                                arenaData = FileManager.getCustomData(plugin, "settings", "/Arenas/" + args[3] + '/');
+                                                //get arenas
+                                                currentArena = Arena.selectArena(args[3], false, null, null);
+                                            }
                                             //set positions
-                                            tempx = player.getLocation().getX();
-                                            tempy = player.getLocation().getY();
-                                            tempz = player.getLocation().getZ();
-                                            //check if positions should be centerized
+                                            tempLoc[0] = player.getLocation().getX();
+                                            tempLoc[1] = player.getLocation().getY();
+                                            tempLoc[2] = player.getLocation().getZ();
+                                            tempLoc[3] = player.getLocation().getYaw();
+                                            tempLoc[4] = player.getLocation().getPitch();
                                             if (config.getBoolean("centerize-teleport-locations") == true) {
-                                                //check if x is negative
-                                                if (tempx < 0) {
-                                                    //centerize x
-                                                    tempx = (int) tempx;
-                                                    tempx+=0.5;
-                                                }
-                                                //check if x is positive
-                                                if (tempx >= 0) {
-                                                    //centerize x
-                                                    tempx = (int) tempx;
-                                                    tempx-=0.5;
-                                                }
-                                                //set y
-                                                tempy = (int) tempy;
-                                                //check if z is negative
-                                                if (tempz < 0) {
-                                                    //centerize z
-                                                    tempz = (int) tempx;
-                                                    tempz+=0.5;
-                                                }
-                                                //check if z is positive
-                                                if (tempz >= 0) {
-                                                    //centerize z
-                                                    tempz = (int) tempx;
-                                                    tempz-=0.5;
-                                                }
+                                                loc = currentArena.centerizeLocation(tempLoc, false);
                                             }
-                                            //cerate spawn
-                                            currentSpawn = new Spawn(plugin);
-                                            currentSpawn = Spawn.createSpawn("Spawn" + Long.toString(currentArena.getCurrentSpawn()), tempx, tempy, tempz);
-                                            //add spawn to arena
-                                            currentArena.addSpawn(currentSpawn);
-                                            //set and save file
-                                            arenaData.createSection("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn()));
-                                            arenaData.set("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn()) + ".name", currentSpawn.getName());
-                                            arenaData.set("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn()) + ".x", currentSpawn.getLocation()[0]);
-                                            arenaData.set("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn()) + ".y", currentSpawn.getLocation()[1]);
-                                            arenaData.set("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn()) + ".z", currentSpawn.getLocation()[2]);
-                                            try {
-                                                arenaData.save(arenadataf);
-                                            } 
-                                            catch (IOException ex) {
-                                                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+                                            else {
+                                                loc[0] = (float) tempLoc[0];
+                                                loc[1] = (float) tempLoc[1];
+                                                loc[2] = (float) tempLoc[2];
+                                                loc[3] = (float) tempLoc[3];
+                                                loc[4] = (float) tempLoc[4];
                                             }
-                                            sender.sendMessage(prefixMessage + arenaSpawnCreateSpawnCreatedMessage);
-                                            //end command
-                                            return true;
+                                            if (currentArena.getCurrentSpawn() <= currentArena.getMaxPlayers()) {
+                                                //create spawn
+                                                currentSpawn = new Spawn(plugin);
+                                                currentSpawn = Spawn.createSpawn("Spawn" + Long.toString(currentArena.getCurrentSpawn()), loc[0], loc[1], loc[2], loc[3], loc[4]);
+                                                //add spawn to arena
+                                                currentArena.addSpawn(currentSpawn);
+                                                //set and save file
+                                                arenaData.createSection("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn()));
+                                                arenaData.set("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn()-1) + ".name", currentSpawn.getName());
+                                                arenaData.set("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn()-1) + ".x", currentSpawn.getLocation()[0]);
+                                                arenaData.set("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn()-1) + ".y", currentSpawn.getLocation()[1]);
+                                                arenaData.set("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn()-1) + ".z", currentSpawn.getLocation()[2]);
+                                                arenaData.set("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn()-1) + ".yaw", currentSpawn.getLocation()[3]);
+                                                arenaData.set("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn()-1) + ".pitch", currentSpawn.getLocation()[4]);
+                                                try {
+                                                    arenaData.save(arenadataf);
+                                                } 
+                                                catch (IOException ex) {
+                                                    Logger.getLogger(SGAdminCommand.class.getName()).log(Level.SEVERE, null, ex);
+                                                }
+                                                sender.sendMessage(prefixMessage + arenaSpawnCreateSpawnCreatedMessage + loc[0] + ',' + loc[1] + ',' + loc[2]);
+                                                //end command
+                                                return true;
+                                            }
+                                            else {
+                                                sender.sendMessage(prefixMessage + arenaSpawnCreateSpawnsFullMessage);
+                                                return true;
+                                            }
                                         }
                                     }
                                     //check if player has permission(s)
@@ -441,36 +557,68 @@ public class SGAdminCommand implements TabExecutor {
                                         //delete spawn
                                         if (args[2].equalsIgnoreCase("delete")) {
                                             //get files
-                                            arenadataf = new File(plugin.getDataFolder() + "/Arenas/" + args[3] + '/', "settings.yml");
-                                            arenaData = FileManager.getCustomData(plugin, "settings", "/Arenas/" + args[3] + '/');
-                                            //get spawn
-                                            currentSpawn = Spawn.selectSpawn(args[3], true, arenaData, arenaData.getStringList("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn())));
-                                            //remove spawn
-                                            currentArena.removeSpawn(currentSpawn);
-                                            currentSpawn.deleteSpawn();
-                                            //set and save file
-                                            arenaData.set("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn()), null);
-                                            try {
-                                                arenaData.save(arenadataf);
-                                            } 
-                                            catch (IOException ex) {
-                                                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+                                            if (args.length == 3 && currentArena != null) {
+                                                arenadataf = new File(plugin.getDataFolder() + "/Arenas/" + currentArena.getName() + '/', "settings.yml");
+                                                arenaData = FileManager.getCustomData(plugin, "settings", "/Arenas/" + currentArena.getName() + '/');
                                             }
-                                            sender.sendMessage(prefixMessage + arenaSpawnDeleteSpawnDeletedMessage);
-                                            //end command
-                                            return true;
+                                            else if (args.length == 3 && currentArena == null) {
+                                                sender.sendMessage(prefixMessage + arenaInvalidArenaMessage);
+                                                return true;
+                                            }
+                                            else {
+                                                //get files
+                                                arenadataf = new File(plugin.getDataFolder() + "/Arenas/" + args[3] + '/', "settings.yml");
+                                                arenaData = FileManager.getCustomData(plugin, "settings", "/Arenas/" + args[3] + '/');
+                                                currentArena = Arena.selectArena(args[3], false, null, null);
+                                            }
+                                            if (currentArena.getCurrentSpawn()-1 > 0) {
+                                                //get spawn
+                                                currentSpawn = Spawn.selectSpawn(currentArena.getName(), true, arenaData, arenaData.getStringList("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn())));
+                                                //remove spawn
+                                                currentArena.removeSpawn(currentSpawn);
+                                                currentSpawn.deleteSpawn();
+                                                //set and save file
+                                                arenaData.set("Spawnpoints.Spawn" + Long.toString(currentArena.getCurrentSpawn()), null);
+                                                try {
+                                                    arenaData.save(arenadataf);
+                                                } 
+                                                catch (IOException ex) {
+                                                    Logger.getLogger(SGAdminCommand.class.getName()).log(Level.SEVERE, null, ex);
+                                                }
+                                                sender.sendMessage(prefixMessage + arenaSpawnDeleteSpawnDeletedMessage);
+                                                //end command
+                                                return true;
+                                            }
+                                            else {
+                                                sender.sendMessage(prefixMessage + arenaSpawnDeleteNoSpawnsMessage);
+                                                //end command
+                                                return true;
+                                            }
                                         }
                                     }
                                     //check if player has permission(s)
                                     if (sender.hasPermission("ingotsg.sgadmin.arena.spawn.list")) {
                                         //list spawns
                                         if (args[2].equalsIgnoreCase("list")) {
-                                            //get file
-                                            arenaData = FileManager.getCustomData(plugin, "settings", "/Arenas/" + args[3] + '/');
-                                            spawnNames = arenaData.getStringList("Spawnpoints");
-                                            sender.sendMessage(arenaSpawnListStart1Message + args[3] + arenaSpawnListStart2Message);
+                                            //get files
+                                            if (args.length == 3 && currentArena != null) {
+                                                arenadataf = new File(plugin.getDataFolder() + "/Arenas/" + currentArena.getName() + '/', "settings.yml");
+                                                arenaData = FileManager.getCustomData(plugin, "settings", "/Arenas/" + currentArena.getName() + '/');
+                                            }
+                                            else if (args.length == 3 && currentArena == null) {
+                                                sender.sendMessage(prefixMessage + arenaInvalidArenaMessage);
+                                                return true;
+                                            }
+                                            else {
+                                                //get files
+                                                arenadataf = new File(plugin.getDataFolder() + "/Arenas/" + args[3] + '/', "settings.yml");
+                                                arenaData = FileManager.getCustomData(plugin, "settings", "/Arenas/" + args[3] + '/');
+                                                currentArena = Arena.selectArena(args[3], false, null, null);
+                                            }
+                                            sender.sendMessage(arenaSpawnListStart1Message + currentArena.getName() + arenaSpawnListStart2Message);
                                             //cycle through all spawns
-                                            for (byte i = 1; i < spawnNames.size(); i++) {
+                                            spawns = currentArena.getSpawns();
+                                            for (byte i = 1; i <= spawns.size(); i++) {
                                                 //get spawn
                                                 currentSpawn = Spawn.selectSpawn("Spawn" + Byte.toString(i), true, arenaData, arenaData.getStringList("Spawnpoints.Spawn" + Byte.toString(i)));
                                                 sender.sendMessage(currentSpawn.getName() + ": x: " + Double.toString(currentSpawn.getLocation()[0]) + " y: " + Double.toString(currentSpawn.getLocation()[1]) + " z: " + Double.toString(currentSpawn.getLocation()[2]));
@@ -570,7 +718,7 @@ public class SGAdminCommand implements TabExecutor {
                                 Main.loadArenas();
                             } 
                             catch (IOException | InvalidConfigurationException ex) {
-                                Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+                                Logger.getLogger(SGAdminCommand.class.getName()).log(Level.SEVERE, null, ex);
                             }
                             sender.sendMessage(prefixMessage + reloadMessage);
                             //end command
@@ -643,7 +791,17 @@ public class SGAdminCommand implements TabExecutor {
         //edit command args
         if (args.length == 3 && args[1].equalsIgnoreCase("edit")) {
             arguments.add("name");
+            arguments.add("minPlayers");
             arguments.add("maxPlayers");
+            arguments.add("skipTimerAt");
+            arguments.add("lobby");
+            arguments.add("exit");
+            arguments.add("spec");
+            arguments.add("center");
+            arguments.add("lobbyWaitTime");
+            arguments.add("lobbySkipTime");
+            arguments.add("gameWaitTime");
+            arguments.add("gameLength");
         }
         //delete, regenerate, and select args
         if (args.length == 3 && (args[1].equalsIgnoreCase("delete") || args[1].equalsIgnoreCase("regenerate") || args[1].equalsIgnoreCase("select"))) {

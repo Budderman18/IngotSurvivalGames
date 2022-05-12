@@ -41,6 +41,7 @@ public class SGCommand implements TabExecutor {
     private String incorrectCommandMessage = ChatColor.translateAlternateColorCodes('&', language.getString("Incorrect-Command-Message"));
     private String joinJoinedGameMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGJoin-Joined-Game-Message"));
     private String joinAlreadyPlayingMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGJoin-Already-Playing-Message"));
+    private String joinArenaLacksSpawnsMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGJoin-Arena-Lacks-Spawns-Message"));
     private String joinArenaMissingMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGJoin-Arena-Missing-Message"));
     private String joinArenaFullMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGJoin-Arena-Full-Message"));
     private String joinArenaRunningMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGJoin-Arena-Running-Message"));
@@ -57,6 +58,48 @@ public class SGCommand implements TabExecutor {
     private String helpHelpMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGHelp-Help-Message"));
     private String helpEndMessage = ChatColor.translateAlternateColorCodes('&', language.getString("SGHelp-End-Message"));
     private String playerOnlyMessage = ChatColor.translateAlternateColorCodes('&', language.getString("Player-Only-Message"));
+    /**
+    * 
+    * This method verifies that a player can join the arena.
+    * 
+    */
+    private boolean verifyJoinabble(CommandSender sender, Arena loadedArena, Player player, String[] args) {
+        try {
+            //load arena
+            loadedArena = Arena.selectArena(args[1], false, null, null);
+            //check if arena is not full
+            if ((loadedArena.getCurrentPlayers() < loadedArena.getMaxPlayers()) && loadedArena.getMaxPlayers() != 0) {
+                //check if arena is active
+                if (loadedArena.getIsActive() == false && loadedArena.getCurrentSpawn() - 1 == loadedArena.getMaxPlayers()) {
+                    if (sender.hasPermission(loadedArena.getPermission()) || sender.hasPermission("ingotsg.arenas.*")) {
+                        //join lobby
+                        lobby.joinLobby(player, loadedArena);
+                        sender.sendMessage(prefixMessage + joinJoinedGameMessage + loadedArena.getName());
+                        return true;
+                    } else {
+                        sender.sendMessage(prefixMessage + noPermissionMessage);
+                    }
+                } else if (loadedArena.getCurrentSpawn() - 1 != loadedArena.getMaxPlayers()) {
+                    sender.sendMessage(prefixMessage + joinArenaLacksSpawnsMessage);
+                    return true;
+                } //run if arena is active
+                else {
+                    sender.sendMessage(prefixMessage + joinArenaRunningMessage);
+                    return true;
+                }
+            } //run if game is full
+            else {
+                sender.sendMessage(prefixMessage + joinArenaFullMessage);
+                return true;
+            }
+        } //run if there is no game specified
+        catch (NullPointerException | IndexOutOfBoundsException ex) {
+            sender.sendMessage(prefixMessage + joinArenaMissingMessage);
+            //end command
+            return true;
+        }
+        return false;
+    }
     /**
     *
     * This method handles the SG command. 
@@ -103,45 +146,8 @@ public class SGCommand implements TabExecutor {
                             if (args.length > 1) {
                                 //check if player is ingame
                                 if (inGame == false) {
-                                    try {
-                                        //load arena
-                                        arenaData = FileManager.getCustomData(plugin, "settings", "/Arenas/" + args[1] + '/');
-                                        paths.add("name");
-                                        paths.add("pos1.x");
-                                        paths.add("pos1.y");
-                                        paths.add("pos1.z");
-                                        paths.add("pos2.x");
-                                        paths.add("pos2.y");
-                                        paths.add("pos2.z");
-                                        paths.add("world");
-                                        paths.add("maxPlayers");
-                                        loadedArena = Arena.selectArena(args[1], false, arenaData, paths);
-                                        //check if arena is not full
-                                        if (loadedArena.getCurrentPlayers() < loadedArena.getMaxPlayers()) {
-                                            //check if arena is active
-                                            if (loadedArena.getIsActive() == false) {
-                                                //join lobby
-                                                lobby.joinLobby(player, loadedArena);
-                                                sender.sendMessage(prefixMessage + joinJoinedGameMessage + loadedArena.getName());
-                                            }
-                                            //run if arena is active
-                                            else {
-                                                sender.sendMessage(prefixMessage + joinArenaRunningMessage);
-                                            }
-                                        }
-                                        //run if game is full
-                                        else {
-                                            sender.sendMessage(prefixMessage + joinArenaFullMessage);
-                                        }
-                                        //stop command
-                                        return true;
-                                    }
-                                    //run if there is no game specified
-                                    catch (NullPointerException | IndexOutOfBoundsException ex) {
-                                        sender.sendMessage(prefixMessage + joinArenaMissingMessage);
-                                        //end command
-                                        return true;
-                                    }
+                                    //try to join game
+                                    return verifyJoinabble(sender, loadedArena, player, args);
                                 }
                                 //run if player is in game
                                 else {
@@ -189,18 +195,8 @@ public class SGCommand implements TabExecutor {
                                                 }
                                                 player.sendMessage("RandNumber: " + randNum + " Arena: " + arenaName);
                                                 loadedArena = Arena.selectArena(arenaName, false, null, null);
-                                                //check if arena is not full
-                                                if (loadedArena.getCurrentPlayers() < loadedArena.getMaxPlayers()) {
-                                                    //join lobby
-                                                    lobby.joinLobby(player, loadedArena);
-                                                    sender.sendMessage(prefixMessage + joinJoinedGameMessage + loadedArena.getName());
-                                                }
-                                                //run if arena is full
-                                                else {
-                                                    sender.sendMessage(prefixMessage + joinArenaFullMessage);
-                                                }
-                                                //end command
-                                                return true;
+                                                //try to join game
+                                                return verifyJoinabble(sender, loadedArena, player, args);
                                             }
                                             else {
                                                 break;
@@ -240,29 +236,9 @@ public class SGCommand implements TabExecutor {
                                         //randomize spawn
                                         randNum = (byte) random.nextInt(0, randEnd);
                                         //load arena
-                                        arenaData = FileManager.getCustomData(plugin, "settings", "/Arenas/" + args[1] + '/');
-                                        paths.add("name");
-                                        paths.add("pos1.x");
-                                        paths.add("pos1.y");
-                                        paths.add("pos1.z");
-                                        paths.add("pos2.x");
-                                        paths.add("pos2.y");
-                                        paths.add("pos2.z");
-                                        paths.add("world");
-                                        paths.add("maxPlayers");
                                         loadedArena = Arena.selectArena(name.get(randNum), true, arenaData, paths);
-                                        //check if arena is not full
-                                        if (loadedArena.getCurrentPlayers() < loadedArena.getMaxPlayers()) {
-                                            //join lobby
-                                            lobby.joinLobby(player, loadedArena);
-                                            sender.sendMessage(prefixMessage + joinJoinedGameMessage + loadedArena.getName());
-                                        }
-                                        //run if game is full
-                                        else {
-                                            sender.sendMessage(prefixMessage + joinArenaFullMessage);
-                                        }
-                                        //end command
-                                        return true;
+                                        //try to join game
+                                        return verifyJoinabble(sender, loadedArena, player, args);
                                     }
                                     //run if there's invalid args
                                     catch (NullPointerException | IndexOutOfBoundsException ex) {
@@ -294,17 +270,7 @@ public class SGCommand implements TabExecutor {
                             if (inGame == true) {
                                 try {
                                     //load arena
-                                    arenaData = FileManager.getCustomData(plugin, "settings", "/Arenas/" + iplayer.getGame() + '/');
-                                    paths.add("name");
-                                    paths.add("pos1.x");
-                                    paths.add("pos1.y");
-                                    paths.add("pos1.z");
-                                    paths.add("pos2.x");
-                                    paths.add("pos2.y");
-                                    paths.add("pos2.z");
-                                    paths.add("world");
-                                    paths.add("maxPlayers");
-                                    loadedArena = Arena.selectArena(iplayer.getGame(), true, arenaData, paths);
+                                    loadedArena = Arena.selectArena(iplayer.getGame(), false, null, null);
                                     //notify player
                                     sender.sendMessage(prefixMessage + leaveLeftGameMessage);
                                     //leave lobby
@@ -332,10 +298,12 @@ public class SGCommand implements TabExecutor {
                             sender.sendMessage(listStartMessage);
                             //get loaded arenas
                             name = FileManager.getArenas(plugin);
+                            Arena tempArena = null;
                             //cycle through loaded arenas
                             for (byte i=0; i < name.size(); i++) {
                                 //arena
-                                sender.sendMessage(name.get(i) + listStatusMessage + ChatColor.translateAlternateColorCodes('&', "&2&oWAITING..."));
+                                tempArena = Arena.selectArena(name.get(i), false, null, null);
+                                sender.sendMessage(tempArena.getName() + listStatusMessage + tempArena.getStatus());
                             }
                             //footer
                             sender.sendMessage(listEndMessage);
@@ -403,7 +371,6 @@ public class SGCommand implements TabExecutor {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         List<String> arguments = new ArrayList<>();
         List<String> name = null;
-        List<?> lists = null;
         //main command args
         if (args.length == 1) {
             arguments.add("join");
