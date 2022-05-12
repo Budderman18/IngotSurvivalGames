@@ -1,6 +1,5 @@
 package com.budderman18.IngotMinigamesAPI.Core.Data;
 
-import com.budderman18.IngotMinigamesAPI.Main;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Random;
@@ -38,27 +37,31 @@ public class Spawn {
     private static int trueIndex = 0;
     //global vars
     private String name = null;
-    private double[] location = new double[3];
+    private double[] location = new double[5];
     private int index = 0;
+    private boolean isOccupied = false;
     /**
     *
-    * This method creates a new spawn. 
-    * Spawns support decimals. 
+    * This method creates a new spawn.Spawns support decimals. 
     *
     * @param name
     * @param x
     * @param y
     * @param z
+    * @param yaw
+    * @param pitch
     * @return 
     * this
     */
-    public Spawn createSpawn(String name, double x, double y, double z) {
+    public Spawn createSpawn(String name, double x, double y, double z, double yaw, double pitch) {
         //create spawn object
         Spawn newSpawn = new Spawn(plugin);
         //create locaiton array
         newSpawn.location[0] = x;
         newSpawn.location[1] = y;
         newSpawn.location[2] = z;
+        newSpawn.location[3] = yaw;
+        newSpawn.location[4] = pitch;
         //save variables
         newSpawn.name = name;
         newSpawn.index = trueIndex;
@@ -77,8 +80,11 @@ public class Spawn {
         this.location[0] = 0;
         this.location[1] = 0;
         this.location[2] = 0;
+        this.location[3] = 0;
+        this.location[4] = 0;
         this.name = null;
         this.index = 0;
+        this.isOccupied = false;
         spawns.remove(this);
         trueIndex--;
     }
@@ -110,6 +116,7 @@ public class Spawn {
                     selectedSpawn.name = namee;
                     selectedSpawn.location = key.location;
                     selectedSpawn.index = key.index;
+                    selectedSpawn.isOccupied = key.isOccupied;
                     //check is useFiles is true
                     if (useFiles == true) {
                         for (short i = 0; i < dataPaths.size(); i++) {
@@ -133,6 +140,21 @@ public class Spawn {
                                 //set z
                                 selectedSpawn.location[2] = file.getDouble(dataPaths.get(i));
                             }
+                            //check if path is yaw
+                            if (file.getString(dataPaths.get(i)).endsWith("yaw")) {
+                                //set yaw
+                                selectedSpawn.location[3] = file.getDouble(dataPaths.get(i));
+                            }
+                            //check if path is pitch
+                            if (file.getString(dataPaths.get(i)).endsWith("pitch")) {
+                                //set pitch
+                                selectedSpawn.location[4] = file.getDouble(dataPaths.get(i));
+                            }
+                            //check if path is isOccupied
+                            if (file.getString(dataPaths.get(i)).contains("isOccupied")) {
+                                //set z
+                                selectedSpawn.isOccupied = file.getBoolean(dataPaths.get(i));
+                            }
                         }
                     }
                     return key;
@@ -142,7 +164,7 @@ public class Spawn {
         //check if arena is still null
         if (selectedSpawn.getName() == null) {
             //output error message
-            Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, "COULD NOT LOAD SPAWN " + namee + '!');
+            Logger.getLogger(Spawn.class.getName()).log(Level.SEVERE, null, "COULD NOT LOAD SPAWN " + namee + '!');
         }
         //return arena
         return selectedSpawn;
@@ -155,7 +177,7 @@ public class Spawn {
     */
     public void moveToSpawn(Player player) {
         //create location from spawn
-        Location location = new Location(Bukkit.getWorld("world"), this.location[0], this.location[1], this.location[2]);
+        Location location = new Location(Bukkit.getWorld("world"), this.location[0], this.location[1], this.location[2], (float) this.location[3], (float) this.location[4]);
         //teleport
         player.teleport(location);
     }
@@ -166,8 +188,9 @@ public class Spawn {
     *
     * @param spawns
     * @param player
+    * @return 
     */
-    public static void moveToRandomSpawn(List<Spawn> spawns, Player player) {
+    public static Spawn moveToRandomSpawn(List<Spawn> spawns, Player player) {
         //call random class
         Random random = new Random(); 
         //local vars
@@ -184,6 +207,7 @@ public class Spawn {
         spawn = spawns.get((int) temploc);
         //teleport
         spawn.moveToSpawn(player);
+        return spawn;
     }
     /**
     *
@@ -238,5 +262,31 @@ public class Spawn {
             return spawns.get(this.index).location;
         }
         return this.location;
+    }
+    /**
+    *
+    * This method sets the isOccupied of the selected spawn. 
+    *
+    * @param isOccupiedd
+    */
+    public void setIsOccupied(boolean isOccupiedd) {
+        //set location array
+        this.isOccupied = isOccupiedd;
+        if (spawns.contains(this)) {
+            isOccupied = spawns.get(this.index).isOccupied;
+        }
+    }
+    /**
+    *
+    * This method obtains the isOccupied of the selected spawn
+    *
+    * @return 
+    */
+    public boolean getIsOccupied() {
+        //return location
+        if (spawns.contains(this)) {
+            return spawns.get(this.index).isOccupied;
+        }
+        return this.isOccupied;
     }
 }
